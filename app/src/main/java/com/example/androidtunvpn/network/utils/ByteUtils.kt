@@ -1,4 +1,4 @@
-package com.example.androidtunvpn.network
+package com.example.androidtunvpn.network.utils
 
 /**
  * Утилитарные функции для чтения и записи целых чисел в байтовых массивах.
@@ -25,7 +25,7 @@ object ByteUtils {
         buf[offset + 1] = (value and 0xFF).toByte()
     }
 
-    /** Записывает 16-битное беззнаковое число в буфер в big-endian порядке. */
+    /** Записывает 32-битное беззнаковое число в буфер в big-endian порядке. */
     fun writeIntBE(buf: ByteArray, offset: Int, value: Int) {
         buf[offset] = ((value ushr 24) and 0xFF).toByte()
         buf[offset + 1] = ((value ushr 16) and 0xFF).toByte()

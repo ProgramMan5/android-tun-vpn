@@ -1,15 +1,20 @@
-package com.example.androidtunvpn.network.udp
+package com.example.simplevpn.com.example.androidtunvpn.network.tcp
 
-import com.example.androidtunvpn.network.ByteUtils
+import com.example.androidtunvpn.network.utils.ByteUtils
 
-/**
- * Утилитарные функции для работы с UDP пакетами.
- */
-object UdpUtils {
-    fun srcPort(buf: ByteArray, udpOffset: Int) = ByteUtils.readUInt16(buf, udpOffset)
-    fun dstPort(buf: ByteArray, udpOffset: Int) = ByteUtils.readUInt16(buf, udpOffset + 2)
-
-    fun udpChecksumIPv4(
+object TcpUtils {
+    fun srcPort(buf: ByteArray) = ByteUtils.readUInt16(buf, 0)
+    fun dstPort(buf: ByteArray) = ByteUtils.readUInt16(buf, 2)
+    fun sqnNumber(buf: ByteArray) = ByteUtils.readIntBE(buf, 4)
+    fun ackNumber(buf: ByteArray) = ByteUtils.readIntBE(buf, 8)
+    fun headerLen(buf: ByteArray) = (buf[12].toInt() ushr 4) and 0xF
+    fun reserved(buf: ByteArray) =
+        ((buf[12].toInt() and 0x0F) shl 2) or ((buf[13].toInt() ushr 6) and 0xF)
+    fun flags(buf: ByteArray) = (buf[13].toInt() ushr 2) and 0xFFF
+    fun winSize(buf: ByteArray) = ByteUtils.readUInt16(buf, 14)
+    fun checksum(buf: ByteArray) = ByteUtils.readUInt16(buf, 16)
+    fun urgPointer(buf: ByteArray) = ByteUtils.readUInt16(buf, 18)
+    fun calculateTcpIpv4Checksum(
         buf: ByteArray,
         udpOffset: Int,
         udpLen: Int,
