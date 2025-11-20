@@ -1,6 +1,7 @@
-package com.example.androidtunvpn.network
+package com.example.androidtunvpn.network.utils
 
 import android.util.Log
+import com.example.androidtunvpn.network.SimpleVpnService
 import java.nio.channels.DatagramChannel
 import java.nio.channels.SelectionKey
 import java.nio.channels.Selector
