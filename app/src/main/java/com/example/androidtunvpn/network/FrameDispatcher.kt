@@ -2,27 +2,24 @@ package com.example.androidtunvpn.network
 
 import com.example.androidtunvpn.network.frameparser.FrameParser
 import com.example.androidtunvpn.network.models.FlowModels
+import com.example.androidtunvpn.network.models.FlowTable
+import com.example.androidtunvpn.network.models.PendingRegistrations
+import com.example.androidtunvpn.network.models.ProtectFunc
 import com.example.androidtunvpn.network.models.parseresult.OK
 import com.example.androidtunvpn.network.utils.ByteUtils
-import java.net.DatagramSocket
 import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.nio.ByteBuffer
 import java.nio.channels.DatagramChannel
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.ConcurrentLinkedQueue
 
-typealias ProtectFunc = (DatagramSocket) -> Boolean
-typealias FlowTable = ConcurrentHashMap<FlowModels.FlowKey, FlowModels.Flow>
-typealias PendingRegistrations = ConcurrentLinkedQueue<Pair<SimpleVpnService.FlowKey, DatagramChannel>>
 
 class FrameDispatcher(private val protect: ProtectFunc) {
     private val parser = FrameParser()
 
     fun start(inputFd: java.io.FileInputStream, flowTable: FlowTable, pendingRegistrations:
-    PendingRegistrations) {
-
-
+    PendingRegistrations
+    ) {
 
         val buf = ByteArray(65535)
         val reusableKey = FlowModels.FlowKey(1, 1, 1, 1)

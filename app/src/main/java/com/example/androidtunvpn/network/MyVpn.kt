@@ -3,12 +3,10 @@ package com.example.androidtunvpn.network
 import android.net.VpnService
 import android.os.ParcelFileDescriptor
 import com.example.androidtunvpn.network.models.FlowModels
+import com.example.androidtunvpn.network.models.ProtectFunc
 import java.io.FileInputStream
 import java.io.FileOutputStream
-import java.net.DatagramSocket
 import java.util.concurrent.ConcurrentHashMap
-import java.nio.channels.DatagramChannel
-import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.Executors
 
 
@@ -24,8 +22,7 @@ class MyVpn : VpnService() {
     private var nioManager: NioManager? = null
 
 
-    private val pendingRegistrations =
-        ConcurrentLinkedQueue<Pair<SimpleVpnService.FlowKey, DatagramChannel>>()
+    private val pendingRegistrations = PendingRegistrations()
 
     private val flowTable = ConcurrentHashMap<FlowModels.FlowKey, FlowModels.Flow>()
 
