@@ -8,3 +8,4 @@ import java.util.concurrent.ConcurrentLinkedQueue
 typealias ProtectFunc = (DatagramSocket) -> Boolean
 typealias FlowTable = ConcurrentHashMap<FlowModels.FlowKey, FlowModels.Flow>
 typealias PendingRegistrations = ConcurrentLinkedQueue<Pair<FlowModels.FlowKey, DatagramChannel>>
+typealias ChannelToFlowKey = ConcurrentHashMap<DatagramChannel, FlowModels.FlowKey>

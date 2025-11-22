@@ -1,12 +1,13 @@
 package com.example.androidtunvpn.network
 
-import com.example.androidtunvpn.network.frameparser.FrameParser
+import com.example.androidtunvpn.network.frameparsers.TunFrameParser
 import com.example.androidtunvpn.network.models.FlowModels
 import com.example.androidtunvpn.network.models.FlowTable
 import com.example.androidtunvpn.network.models.PendingRegistrations
 import com.example.androidtunvpn.network.models.ProtectFunc
 import com.example.androidtunvpn.network.models.parseresult.OK
 import com.example.androidtunvpn.network.utils.ByteUtils
+import java.io.FileInputStream
 import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.nio.ByteBuffer
@@ -15,12 +16,13 @@ import java.util.concurrent.ConcurrentHashMap
 
 
 class FrameDispatcher(private val protect: ProtectFunc) {
-    private val parser = FrameParser()
+    private val parser = TunFrameParser()
 
-    fun start(inputFd: java.io.FileInputStream, flowTable: FlowTable, pendingRegistrations:
+    fun start(inputFd: FileInputStream, flowTable: FlowTable, pendingRegistrations:
     PendingRegistrations
     ) {
 
+        var lastGcTime = 0L
         val buf = ByteArray(65535)
         val reusableKey = FlowModels.FlowKey(1, 1, 1, 1)
         val byteBuffer = ByteBuffer.allocate(65535)
@@ -37,6 +39,7 @@ class FrameDispatcher(private val protect: ProtectFunc) {
 
 
             var flow = flowTable[reusableKey]
+
             if (flow==null){
 
                 val channel = DatagramChannel.open()
@@ -52,6 +55,7 @@ class FrameDispatcher(private val protect: ProtectFunc) {
 
                 flow = FlowModels.Flow(channel, System.currentTimeMillis())
 
+
                 registerChannel(pendingRegistrations, keyForMap, channel)
 
                 flowTable[keyForMap] = flow
@@ -65,12 +69,16 @@ class FrameDispatcher(private val protect: ProtectFunc) {
             )
             flow.channel.send(byteBuffer, targetAddress)
 
-            gcFlows(flowTable)
+            val now = System.currentTimeMillis()
+            if (now - lastGcTime > 10_000) {
+                gcFlows(flowTable)
+                lastGcTime = now
+            }
 
         }
     }
 
-    fun registerChannel(pendingRegistrations: PendingRegistrations, key: FlowModels.FlowKey, channel: DatagramChannel) {
+    private fun registerChannel(pendingRegistrations: PendingRegistrations, key: FlowModels.FlowKey, channel: DatagramChannel) {
         pendingRegistrations.add(key to channel)
     }
 
@@ -88,4 +96,6 @@ class FrameDispatcher(private val protect: ProtectFunc) {
             }
         }
     }
+
+
 }

@@ -1,4 +1,4 @@
-package com.example.androidtunvpn.network.frameparser
+package com.example.androidtunvpn.network.frameparsers
 
 import com.example.androidtunvpn.network.models.FlowModels
 import com.example.androidtunvpn.network.models.parseresult.*
@@ -7,7 +7,7 @@ import com.example.androidtunvpn.network.utils.ip.v4.IpPacketV4
 import com.example.androidtunvpn.network.utils.udp.UdpPacket
 import java.nio.ByteBuffer
 
-class FrameParser {
+class TunFrameParser {
 
 
     fun frameParsing(

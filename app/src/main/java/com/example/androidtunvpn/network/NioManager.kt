@@ -1,53 +1,45 @@
 package com.example.androidtunvpn.network
+
 import java.nio.channels.DatagramChannel
 import android.util.Log
+import com.example.androidtunvpn.network.frameparsers.NetworkFrameParser
+import com.example.androidtunvpn.network.models.ChannelToFlowKey
+import com.example.androidtunvpn.network.models.FlowModels
+import com.example.androidtunvpn.network.models.PendingRegistrations
 import java.io.FileOutputStream
 import java.nio.ByteBuffer
 import java.nio.channels.SelectionKey
 import java.nio.channels.Selector
-import java.util.concurrent.ConcurrentLinkedQueue
 
-class NioManager() : Runnable {
 
-    // "Диспетчер", который следит за всеми каналами.
+class NioManager(private val outputFd: FileOutputStream) {
+
     private val selector = Selector.open()
     private val closeables = mutableListOf<AutoCloseable>(selector)
 
-    // Потокобезопасная очередь для регистрации новых каналов.
-    // tunLoop будет добавлять в нее, а наш поток - забирать.
-    private val pendingRegistrations =
-        ConcurrentLinkedQueue<Pair<SimpleVpnService.FlowKey, DatagramChannel>>()
-
-    @Volatile
-    private var isRunning = false
 
 
-    // Карта для связи канала с его ключом потока (flow), чтобы знать, куда отправлять ответ.
-    private val channelToFlowKey = mutableMapOf<DatagramChannel, SimpleVpnService.FlowKey>()
+    private val channelToFlowKey = ChannelToFlowKey()
 
-    /**
-     * Регистрирует новый канал для отслеживания.
-     * Вызывается из потока tunLoop.
-     */
-    fun registerChannel(key: SimpleVpnService.FlowKey, channel: DatagramChannel) {
-        pendingRegistrations.add(key to channel)
-        // "Будим" селектор, если он спит в select(), чтобы он обработал новую регистрацию.
-        selector.wakeup()
-    }
+    private val networkFrameParser = NetworkFrameParser()
 
-    override fun run() {
+
+
+    fun start(
+        pendingRegistrations: PendingRegistrations,
+    ) {
         Log.i(
             "com.example.androidtunvpn.network.NioUdpManager",
             "NIO Manager started on thread ${Thread.currentThread().name}"
         )
-        isRunning = true
-        // Используем ByteBuffer для чтения данных. Он переиспользуется.
+
         val buffer = ByteBuffer.allocate(65535)
 
-        while (isRunning) {
+        while (true) {
             try {
+
                 // Обрабатываем новые регистрации, пришедшие из tunLoop
-                handlePendingRegistrations()
+                handlePendingRegistrations(pendingRegistrations)
 
                 // Ждем событий (или 100 мс) на любом из зарегистрированных каналов.
                 // Это - единственный блокирующий вызов.
@@ -67,6 +59,7 @@ class NioManager() : Runnable {
                         /**??????? */
                         // Читаем данные из канала в буфер. Это неблокирующая операция.
                         val sourceAddress = channel.receive(buffer)
+
                         if (sourceAddress != null) {
                             // Данные прочитаны, передаем их в TUN
                             val flowKey = channelToFlowKey[channel]
@@ -81,14 +74,16 @@ class NioManager() : Runnable {
                 Log.e("com.example.androidtunvpn.network.NioUdpManager", "Error in NIO loop", e)
             }
         }
-        close()
-        Log.i("com.example.androidtunvpn.network.NioUdpManager", "NIO Manager stopped.")
     }
 
-    private fun handlePendingRegistrations() {
-        var registration: Pair<SimpleVpnService.FlowKey, DatagramChannel>?
-        while (pendingRegistrations.poll().also { registration = it } != null) {
-            val (flowKey, channel) = registration!!
+    private fun handlePendingRegistrations(pendingRegistrations: PendingRegistrations) {
+        var registration: Pair<FlowModels.FlowKey, DatagramChannel>?
+
+        while (true) {
+            registration = pendingRegistrations.poll()
+            if (registration == null) break
+
+            val (flowKey, channel) = registration
             try {
                 // Переводим канал в неблокирующий режим
                 channel.configureBlocking(false)
@@ -111,32 +106,33 @@ class NioManager() : Runnable {
         }
     }
 
-    private fun processIncomingData(flowKey: SimpleVpnService.FlowKey, buffer: ByteBuffer) {
+
+    private fun processIncomingData(
+        flowKey: FlowModels.FlowKey,
+        buffer: ByteBuffer
+    ) {
         buffer.flip() // Готовим буфер к чтению
         val payload = ByteArray(buffer.remaining())
         buffer.get(payload)
 
-        // Собираем IP/UDP пакет и пишем в TUN.
-        // IP и порты меняются местами, как и раньше.
-        val ipPacketBytes = buildIpv4UdpPacket(
+        val buf = ByteArray(65535)
+
+        val totalLen = networkFrameParser.buildIpv4UdpPacket(
             srcIp = flowKey.dstIp,
             dstIp = flowKey.srcIp,
             srcPort = flowKey.dstPort,
             dstPort = flowKey.srcPort,
-            payload = payload
+            payload = payload,
+            buf = buf
         )
 
         try {
-            tunOutput.write(ipPacketBytes)
+            outputFd.write(buf,0,totalLen)
         } catch (e: Exception) {
             Log.e("com.example.androidtunvpn.network.NioUdpManager", "Failed to write to TUN", e)
         }
     }
 
-    fun stop() {
-        isRunning = false
-        selector.wakeup() // Разбудить, чтобы цикл завершился
-    }
 
     private fun close() {
         closeables.forEach {
@@ -147,10 +143,4 @@ class NioManager() : Runnable {
         }
     }
 
-    // Эта функция-билдер должна быть доступна здесь.
-    // В идеале, вынести её в отдельный класс PacketBuilder.
-    private fun buildIpv4UdpPacket(/* ... */): ByteArray {
-        // ... ваша реализация сборки пакета ...
-        return ByteArray(0) // Заглушка
-    }
 }

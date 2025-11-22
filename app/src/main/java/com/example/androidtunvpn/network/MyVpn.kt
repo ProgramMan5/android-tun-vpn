@@ -2,13 +2,12 @@ package com.example.androidtunvpn.network
 
 import android.net.VpnService
 import android.os.ParcelFileDescriptor
-import com.example.androidtunvpn.network.models.FlowModels
+import com.example.androidtunvpn.network.models.FlowTable
+import com.example.androidtunvpn.network.models.PendingRegistrations
 import com.example.androidtunvpn.network.models.ProtectFunc
 import java.io.FileInputStream
 import java.io.FileOutputStream
-import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
-
 
 
 class MyVpn : VpnService() {
@@ -17,17 +16,14 @@ class MyVpn : VpnService() {
 
     private val executor = Executors.newSingleThreadExecutor()
 
-
-
     private var nioManager: NioManager? = null
-
 
     private val pendingRegistrations = PendingRegistrations()
 
-    private val flowTable = ConcurrentHashMap<FlowModels.FlowKey, FlowModels.Flow>()
+    private val flowTable = FlowTable()
 
-    val protectFn: ProtectFunc = { socket -> this.protect(socket) }
 
+    private val protectFn: ProtectFunc = { socket -> this.protect(socket) }
 
 
     private fun startVpn() {
@@ -38,23 +34,32 @@ class MyVpn : VpnService() {
         vpnInterface = builder.establish()
 
         vpnInterface?.let { pfd ->
-            val tunOutput = FileOutputStream(pfd.fileDescriptor)
-            nioManager = NioManager(tunOutput).also {
-                executor.submit(it)
-            }
+            val outputFd = FileOutputStream(pfd.fileDescriptor)
+            nioManager = NioManager(outputFd)
+            executor.submit(Runnable {
+                nioManager!!.start(
+                    pendingRegistrations,
+                )
+            })
             val inputFd = FileInputStream(pfd.fileDescriptor)
 
             val frameDispatcher = FrameDispatcher(protectFn)
 
-            Thread(Runnable { frameDispatcher.start(inputFd, flowTable, pendingRegistrations) }, "TunReaderThread").start()
+            Thread(
+                Runnable {
+                    frameDispatcher.start(
+                        inputFd,
+                        flowTable,
+                        pendingRegistrations
+                    )
+                },
+                "TunReaderThread"
+            ).start()
         }
     }
 
 
-
-
     override fun onDestroy() {
-        nioManager?.stop()
         executor.shutdownNow()
         vpnInterface?.close()
         super.onDestroy()
