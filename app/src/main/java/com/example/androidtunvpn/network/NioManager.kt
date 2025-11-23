@@ -15,15 +15,12 @@ import java.nio.channels.Selector
 class NioManager(private val outputFd: FileOutputStream) {
 
     private val selector = Selector.open()
+
     private val closeables = mutableListOf<AutoCloseable>(selector)
-
-
 
     private val channelToFlowKey = ChannelToFlowKey()
 
     private val networkFrameParser = NetworkFrameParser()
-
-
 
     fun start(
         pendingRegistrations: PendingRegistrations,
@@ -35,9 +32,8 @@ class NioManager(private val outputFd: FileOutputStream) {
 
         val buffer = ByteBuffer.allocate(65535)
 
-        while (true) {
+        while (!Thread.currentThread().isInterrupted) {
             try {
-
                 // Обрабатываем новые регистрации, пришедшие из tunLoop
                 handlePendingRegistrations(pendingRegistrations)
 
@@ -72,6 +68,9 @@ class NioManager(private val outputFd: FileOutputStream) {
                 }
             } catch (e: Exception) {
                 Log.e("com.example.androidtunvpn.network.NioUdpManager", "Error in NIO loop", e)
+            }
+            finally {
+                close()
             }
         }
     }

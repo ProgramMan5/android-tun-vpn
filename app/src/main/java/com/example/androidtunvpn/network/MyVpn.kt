@@ -14,7 +14,7 @@ class MyVpn : VpnService() {
 
     private var vpnInterface: ParcelFileDescriptor? = null
 
-    private val executor = Executors.newSingleThreadExecutor()
+    private val executor = Executors.newFixedThreadPool(2)
 
     private var nioManager: NioManager? = null
 
@@ -22,9 +22,7 @@ class MyVpn : VpnService() {
 
     private val flowTable = FlowTable()
 
-
     private val protectFn: ProtectFunc = { socket -> this.protect(socket) }
-
 
     private fun startVpn() {
         val builder = Builder()
@@ -36,17 +34,17 @@ class MyVpn : VpnService() {
         vpnInterface?.let { pfd ->
             val outputFd = FileOutputStream(pfd.fileDescriptor)
             nioManager = NioManager(outputFd)
-            executor.submit(Runnable {
+            executor.submit({
                 nioManager!!.start(
                     pendingRegistrations,
                 )
-            })
+            },"TunNioThread")
             val inputFd = FileInputStream(pfd.fileDescriptor)
 
             val frameDispatcher = FrameDispatcher(protectFn)
 
-            Thread(
-                Runnable {
+            executor.submit(
+                {
                     frameDispatcher.start(
                         inputFd,
                         flowTable,
@@ -54,10 +52,9 @@ class MyVpn : VpnService() {
                     )
                 },
                 "TunReaderThread"
-            ).start()
+            )
         }
     }
-
 
     override fun onDestroy() {
         executor.shutdownNow()

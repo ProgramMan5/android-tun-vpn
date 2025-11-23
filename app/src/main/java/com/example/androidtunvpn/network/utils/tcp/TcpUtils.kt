@@ -1,4 +1,4 @@
-package com.example.simplevpn.com.example.androidtunvpn.network.tcp
+package com.example.androidtunvpn.network.utils.tcp
 
 import com.example.androidtunvpn.network.utils.ByteUtils
 
