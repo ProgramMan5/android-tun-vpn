@@ -133,7 +133,7 @@ class NioManager(private val outputFd: FileOutputStream) {
     }
 
 
-    private fun close() {
+     fun close() {
         closeables.forEach {
             try {
                 it.close()

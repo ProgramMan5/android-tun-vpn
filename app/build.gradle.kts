@@ -4,13 +4,13 @@ plugins {
 }
 
 android {
-    namespace = "com.example.proxyapp"
-    compileSdk = 34
+    namespace = "com.example.androidtunvpn"
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.example.proxyapp"
         minSdk = 24
-        targetSdk = 34
+        targetSdk = 36
         versionCode = 1
         versionName = "1.0"
 

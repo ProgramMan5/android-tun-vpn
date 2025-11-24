@@ -17,7 +17,6 @@ import java.util.concurrent.ConcurrentHashMap
 
 class FrameDispatcher(private val protect: ProtectFunc) {
     private val parser = TunFrameParser()
-
     fun start(
         inputFd: FileInputStream, flowTable: FlowTable,
         pendingRegistrations:
@@ -67,7 +66,6 @@ class FrameDispatcher(private val protect: ProtectFunc) {
                 )
                 flow.channel.send(byteBuffer, targetAddress)
 
-
                 val now = System.currentTimeMillis()
                 if (now - lastGcTime > 10_000) {
                     gcFlows(flowTable)
@@ -86,7 +84,6 @@ class FrameDispatcher(private val protect: ProtectFunc) {
     ) {
         pendingRegistrations.add(key to channel)
     }
-
 
     private fun closeChannels(flowTable: FlowTable){
         // закрываем все каналы при завершении

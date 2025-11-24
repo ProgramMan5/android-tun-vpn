@@ -3,45 +3,24 @@ package com.example.androidtunvpn
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import com.example.androidtunvpn.ui.theme.ProxyAppTheme
+import com.example.androidtunvpn.features.vpn.data.VpnRepositoryImpl
+import com.example.androidtunvpn.features.vpn.domain.usecase.StartVpnUseCase
+import com.example.androidtunvpn.features.vpn.domain.usecase.StopVpnUseCase
+import com.example.androidtunvpn.features.vpn.presentation.VpnScreen
+import com.example.androidtunvpn.features.vpn.presentation.VpnViewModel
 
 class MainActivity : ComponentActivity() {
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+
+        val repo = VpnRepositoryImpl(applicationContext)
+        val start = StartVpnUseCase(repo)
+        val stop = StopVpnUseCase(repo)
+        val vm = VpnViewModel(start, stop)
+
         setContent {
-            ProxyAppTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
-            }
+            VpnScreen(vm)
         }
-    }
-}
-
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    ProxyAppTheme {
-        Greeting("Android")
     }
 }

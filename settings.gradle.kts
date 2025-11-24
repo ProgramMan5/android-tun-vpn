@@ -19,6 +19,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Proxy App"
+rootProject.name = "android-tun-vpn"
 include(":app")
  
